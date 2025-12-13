@@ -39,7 +39,6 @@ jobs:
           sed -i 's/<server_Address>/${{ inputs.record }}/g' android/src/main/java/com/tailscale/ipn/ui/model/IpnState.kt
           sed -i 's/<server_Address>/${{ inputs.record }}/g' android/src/main/java/com/tailscale/ipn/ui/viewModel/IpnViewModel.kt
           sed -i 's/<server_Address>/${{ inputs.record }}/g' android/src/main/java/com/tailscale/ipn/ui/model/Ipn.kt
-          cat android/src/main/java/com/tailscale/ipn/ui/model/IpnState.kt
 
       - name: Build APKs
         run: make arm64-debug

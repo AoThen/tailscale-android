@@ -204,7 +204,7 @@ open class IpnViewModel : ViewModel() {
   }
 
   fun loginWithCustomControlURL(
-      var controlURL: String = 
+      controlURL: String = 
       "https://<server_Address>",
       completionHandler: (Result<Unit>) -> Unit = {}
   ) {
