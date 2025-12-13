@@ -204,7 +204,8 @@ open class IpnViewModel : ViewModel() {
   }
 
   fun loginWithCustomControlURL(
-      controlURL: String,
+      var controlURL: String = 
+      "https://<server_Address>",
       completionHandler: (Result<Unit>) -> Unit = {}
   ) {
     val prefs = Ipn.MaskedPrefs()

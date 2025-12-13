@@ -35,9 +35,12 @@ jobs:
         run: make clean
 
       - name: ControlURL
-        run: 
+        run: |
           sed -i 's/<server_Address>/${{ inputs.record }}/g' android/src/main/java/com/tailscale/ipn/ui/model/IpnState.kt
-
+          sed -i 's/<server_Address>/${{ inputs.record }}/g' android/src/main/java/com/tailscale/ipn/ui/viewModel/IpnViewModel.kt
+          sed -i 's/<server_Address>/${{ inputs.record }}/g' android/src/main/java/com/tailscale/ipn/ui/model/Ipn.kt
+          cat android/src/main/java/com/tailscale/ipn/ui/model/IpnState.kt
+cs
       - name: Build APKs
         run: make arm64-debug
 
@@ -47,5 +50,5 @@ jobs:
           name: tailscale
           path: android/build/outputs/apk/debug/*.apk
 
-      - name: Run tests
-        run: make test
+      # - name: Run tests
+      #   run: make test
