@@ -1,4 +1,4 @@
-name: Android CI
+name: Android DIY
 
 on:
   workflow_dispatch:
