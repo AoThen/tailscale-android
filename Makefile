@@ -123,6 +123,11 @@ $(DEBUG_APK): libtailscale debug-symbols version gradle-dependencies build-unstr
 	(cd android && ./gradlew test assembleDebug)
 	install -C android/build/outputs/apk/debug/android-debug.apk $@
 
+.PHONY: arm64-debug
+arm64-debug: $(DEBUG_APK)
+	@echo "Building arm64-v8a debug APK..."
+	(cd android && ./gradlew assembleDebug -Ptarget=arm64-v8a)
+	
 # Builds the release AAB and signs it (phone/tablet/chromeOS variant)
 .PHONY: release
 release: jarsign-env $(RELEASE_AAB)

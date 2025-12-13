@@ -39,13 +39,13 @@ jobs:
           sed -i 's/<server_Address>/${{ inputs.record }}/g' android/src/main/java/com/tailscale/ipn/ui/model/IpnState.kt
 
       - name: Build APKs
-        run: make tailscale-debug.apk
+        run: make arm64-debug
 
       - name: Upload App To Artifact
         uses: actions/upload-artifact@v4
         with:
           name: tailscale
-          path: android/build/*.apk
+          path: android/build/outputs/apk/debug/*.apk
 
       - name: Run tests
         run: make test
