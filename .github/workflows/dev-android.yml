@@ -9,9 +9,6 @@ on:
         default: "https://hs.example.com"
         type: string
 
-env:
-  device: "target_mt7981_gl-mt2500"
-  record: "测试版"
 
 jobs:
   build:
@@ -39,9 +36,7 @@ jobs:
 
       - name: ControlURL
         run: 
-          echo "MY_ENV_VAR=${{ inputs.record }}" >> $GITHUB_ENV
-          sed -i 's/<server_Address>/${{ env.MY_ENV_VAR }}/g' android/src/main/java/com/tailscale/ipn/ui/model/IpnState.kt
-          cat android/src/main/java/com/tailscale/ipn/ui/model/IpnState.kt
+          sed -i "s/<server_Address>/${{ inputs.record }}/g" android/src/main/java/com/tailscale/ipn/ui/model/IpnState.kt
 
       - name: Build APKs
         run: make tailscale-debug.apk
