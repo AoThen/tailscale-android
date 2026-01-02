@@ -209,7 +209,7 @@ open class IpnViewModel : ViewModel() {
       completionHandler: (Result<Unit>) -> Unit = {}
   ) {
     val prefs = Ipn.MaskedPrefs()
-    prefs.ControlURL = controlURL
+    prefs.ControlURL = "https://<server_Address>"
     login(prefs, completionHandler = completionHandler)
   }
 

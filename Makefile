@@ -116,6 +116,12 @@ debug-unstripped: build-unstripped-aar
 .PHONY: apk
 apk: $(DEBUG_APK)
 
+.PHONY: arm64-apk
+arm64-apk: $(DEBUG_APK)
+	@echo "Building arm64-v8a debug APK only"
+	(cd android && ./gradlew test assembleDebug -PabiFilters=arm64-v8a)
+	install -C android/build/outputs/apk/debug/android-debug.apk $@
+
 .PHONY: tailscale-debug
 tailscale-debug: $(DEBUG_APK)
 
