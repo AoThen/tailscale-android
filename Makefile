@@ -156,7 +156,7 @@ release-apk-arm64-v8a-apksigner: keystore-env version gradle-dependencies
 	@echo "Building arm64-v8a release APK with apksigner..."
 	(cd android && ./gradlew assembleRelease -Pabis=arm64-v8a)
 	@echo "Signing APK with apksigner..."
-	$(ANDROID_HOME)/build-tools/34.0.0/apksigner sign --ks $(JKS_PATH) --ks-pass pass:$(JKS_PASSWORD) \
+	$(ANDROID_HOME)/build-tools/34.0.0/apksigner sign --ks $(JKS_PATH) --ks-pass file:$(JKS_PASSWORD_File) \
 		--out tailscale-release-arm64-v8a.apk \
 		./android/build/outputs/apk/release/android-release-unsigned.apk
 	@echo "Verifying signature..."
