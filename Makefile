@@ -141,14 +141,27 @@ apk-arm64-v8a: version gradle-dependencies
 	install -C ./android/build/outputs/apk/debug/android-debug.apk tailscale-debug-arm64-v8a.apk
 	@echo "Successfully built: tailscale-debug-arm64-v8a.apk"
 
-# Builds arm64-v8a release APK (signed, production-ready)
+# Builds arm64-v8a release APK signed with jarsigner (traditional method)
 .PHONY: release-apk-arm64-v8a
 release-apk-arm64-v8a: jarsign-env version gradle-dependencies
-	@echo "Building arm64-v8a release APK..."
+	@echo "Building arm64-v8a release APK with jarsigner..."
 	(cd android && ./gradlew assembleRelease -Pabis=arm64-v8a)
 	install -C ./android/build/outputs/apk/release/android-release-unsigned.apk tailscale-release-arm64-v8a.apk
 	@jarsigner -sigalg SHA256withRSA -digestalg SHA-256 -keystore $(JKS_PATH) -storepass $(JKS_PASSWORD) tailscale-release-arm64-v8a.apk tailscale
-	@echo "Successfully built and signed: tailscale-release-arm64-v8a.apk"
+	@echo "Successfully built and signed with jarsigner: tailscale-release-arm64-v8a.apk"
+
+# Builds arm64-v8a release APK signed with apksigner (recommended by Google)
+.PHONY: release-apk-arm64-v8a-apksigner
+release-apk-arm64-v8a-apksigner: keystore-env version gradle-dependencies
+	@echo "Building arm64-v8a release APK with apksigner..."
+	(cd android && ./gradlew assembleRelease -Pabis=arm64-v8a)
+	@echo "Signing APK with apksigner..."
+	$(ANDROID_HOME)/build-tools/34.0.0/apksigner sign --ks $(JKS_PATH) --ks-pass pass:$(JKS_PASSWORD) \
+		--out tailscale-release-arm64-v8a.apk \
+		./android/build/outputs/apk/release/android-release-unsigned.apk
+	@echo "Verifying signature..."
+	$(ANDROID_HOME)/build-tools/34.0.0/apksigner verify -v tailscale-release-arm64-v8a.apk
+	@echo "Successfully built and signed with apksigner: tailscale-release-arm64-v8a.apk"
 
 # gradle-dependencies groups together the android sources and libtailscale needed to assemble tests/debug/release builds.
 .PHONY: gradle-dependencies
@@ -273,6 +286,10 @@ ifeq ($(wildcard $(JKS_PATH)),)
 	$(error JKS_PATH does not point to a file)
 endif
 	@echo "keystore path set to $(JKS_PATH)"
+
+# Alias for jarsign-env (more generic name for both jarsigner and apksigner)
+.PHONY: keystore-env
+keystore-env: jarsign-env
 
 .PHONY: androidpath
 androidpath:
