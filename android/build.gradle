@@ -48,6 +48,14 @@ android {
         // Set it to false either here or in your local.properties file to
         // disable this behaviour.
         buildConfigField "boolean", "USE_GOOGLE_DNS_FALLBACK", getLocalProperty("tailscale.useGoogleDnsFallback", "true")
+
+        // Support for building specific ABI architectures
+        // Can be overridden by gradle property: -Pabis=arm64-v8a
+        if (project.hasProperty('abis')) {
+            ndk {
+                abiFilters project.property('abis').split(',')
+            }
+        }
     }
 
     compileOptions {

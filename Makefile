@@ -116,23 +116,12 @@ debug-unstripped: build-unstripped-aar
 .PHONY: apk
 apk: $(DEBUG_APK)
 
-.PHONY: arm64-apk
-arm64-apk: $(DEBUG_APK)
-	@echo "Building arm64-v8a debug APK only"
-	(cd android && ./gradlew test assembleDebug -PabiFilters=arm64-v8a)
-	install -C android/build/outputs/apk/debug/android-debug.apk $@
-
 .PHONY: tailscale-debug
 tailscale-debug: $(DEBUG_APK)
 
 $(DEBUG_APK): libtailscale debug-symbols version gradle-dependencies build-unstripped-aar
 	(cd android && ./gradlew test assembleDebug)
 	install -C android/build/outputs/apk/debug/android-debug.apk $@
-
-.PHONY: arm64-debug
-arm64-debug: $(DEBUG_APK)
-	@echo "Building arm64-v8a debug APK..."
-	(cd android && ./gradlew clean assembleDebug -PabiFilters=arm64-v8a)
 
 # Builds the release AAB and signs it (phone/tablet/chromeOS variant)
 .PHONY: release
@@ -143,6 +132,23 @@ release: jarsign-env $(RELEASE_AAB)
 .PHONY: release-tv
 release-tv: jarsign-env $(RELEASE_TV_AAB)
 	@jarsigner -sigalg SHA256withRSA -digestalg SHA-256 -keystore $(JKS_PATH) -storepass $(JKS_PASSWORD) $(RELEASE_TV_AAB) tailscale
+
+# Builds arm64-v8a debug APK (unsigned, for development and testing)
+.PHONY: apk-arm64-v8a
+apk-arm64-v8a: version gradle-dependencies
+	@echo "Building arm64-v8a debug APK..."
+	(cd android && ./gradlew assembleDebug -Pabis=arm64-v8a)
+	install -C ./android/build/outputs/apk/debug/android-debug.apk tailscale-debug-arm64-v8a.apk
+	@echo "Successfully built: tailscale-debug-arm64-v8a.apk"
+
+# Builds arm64-v8a release APK (signed, production-ready)
+.PHONY: release-apk-arm64-v8a
+release-apk-arm64-v8a: jarsign-env version gradle-dependencies
+	@echo "Building arm64-v8a release APK..."
+	(cd android && ./gradlew assembleRelease -Pabis=arm64-v8a)
+	install -C ./android/build/outputs/apk/release/android-release-unsigned.apk tailscale-release-arm64-v8a.apk
+	@jarsigner -sigalg SHA256withRSA -digestalg SHA-256 -keystore $(JKS_PATH) -storepass $(JKS_PASSWORD) tailscale-release-arm64-v8a.apk tailscale
+	@echo "Successfully built and signed: tailscale-release-arm64-v8a.apk"
 
 # gradle-dependencies groups together the android sources and libtailscale needed to assemble tests/debug/release builds.
 .PHONY: gradle-dependencies
