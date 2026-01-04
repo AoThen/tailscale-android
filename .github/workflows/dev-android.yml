@@ -2,12 +2,6 @@ name: Android DIY
 
 on:
   workflow_dispatch:
-    inputs:
-      record:
-        description: "ControlURL"
-        required: false
-        default: "hs.example.com"
-        type: string
 
 
 jobs:
@@ -33,12 +27,6 @@ jobs:
       # Clean should essentially be a no-op, but make sure that it works.
       - name: Clean
         run: make clean
-
-      - name: ControlURL
-        run: |
-          sed -i 's/<server_Address>/${{ inputs.record }}/g' android/src/main/java/com/tailscale/ipn/ui/model/IpnState.kt
-          sed -i 's/<server_Address>/${{ inputs.record }}/g' android/src/main/java/com/tailscale/ipn/ui/viewModel/IpnViewModel.kt
-          sed -i 's/<server_Address>/${{ inputs.record }}/g' android/src/main/java/com/tailscale/ipn/ui/model/Ipn.kt
 
       - name: Build APKs
         run: make apk-arm64-v8a

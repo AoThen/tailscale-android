@@ -125,8 +125,7 @@ class IpnLocal {
       val UserProfile: Tailcfg.UserProfile,
       val NetworkProfile: Tailcfg.NetworkProfile? = null,
       val LocalUserID: String,
-      var ControlURL: String = 
-      "https://<server_Address>"
+      var ControlURL: String? = null,
   ) {
     fun isEmpty(): Boolean {
       return ID.isEmpty()

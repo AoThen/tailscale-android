@@ -204,12 +204,11 @@ open class IpnViewModel : ViewModel() {
   }
 
   fun loginWithCustomControlURL(
-      controlURL: String = 
-      "https://<server_Address>",
+      controlURL: String,
       completionHandler: (Result<Unit>) -> Unit = {}
   ) {
     val prefs = Ipn.MaskedPrefs()
-    prefs.ControlURL = "https://<server_Address>"
+    prefs.ControlURL = controlURL
     login(prefs, completionHandler = completionHandler)
   }
 
