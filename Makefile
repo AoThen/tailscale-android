@@ -147,7 +147,7 @@ release-apk-arm64-v8a: jarsign-env version gradle-dependencies
 	@echo "Building arm64-v8a release APK..."
 	(cd android && ./gradlew assembleRelease -Pabis=arm64-v8a)
 	install -C ./android/build/outputs/apk/release/android-release-unsigned.apk tailscale-release-arm64-v8a.apk
-	@jarsigner -sigalg SHA256withRSA -digestalg SHA-256 -keystore $(SIGN_STORE_FILE) -storepass $(SIGN_STORE_PASSWORD) tailscale-release-arm64-v8a.apk tailscale
+	@jarsigner -sigalg SHA256withRSA -digestalg SHA-256 -keystore $(JKS_PATH) -storepass $(JKS_PASSWORD) tailscale-release-arm64-v8a.apk tailscale
 	@echo "Successfully built and signed: tailscale-release-arm64-v8a.apk"
 
 # gradle-dependencies groups together the android sources and libtailscale needed to assemble tests/debug/release builds.
