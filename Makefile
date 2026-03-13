@@ -152,7 +152,7 @@ release-apk-arm64-v8a: jarsign-env version gradle-dependencies
 
 # Builds arm64-v8a release APK signed with apksigner (recommended by Google)
 .PHONY: release-apk-arm64-v8a-apksigner
-release-apk-arm64-v8a-apksigner: keystore-env version gradle-dependencies
+release-apk-arm64-v8a-apksigner: jarsign-env version gradle-dependencies
 	@echo "Building arm64-v8a release APK with apksigner..."
 	(cd android && ./gradlew assembleRelease -Pabis=arm64-v8a)
 	@echo "Signing APK with apksigner..."
