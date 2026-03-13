@@ -133,7 +133,6 @@ release: jarsign-env $(RELEASE_AAB)
 release-tv: jarsign-env $(RELEASE_TV_AAB)
 	@jarsigner -sigalg SHA256withRSA -digestalg SHA-256 -keystore $(JKS_PATH) -storepass $(JKS_PASSWORD) $(RELEASE_TV_AAB) tailscale
 
-<<<<<<< ours
 # Builds arm64-v8a debug APK (unsigned, for development and testing)
 .PHONY: apk-arm64-v8a
 apk-arm64-v8a: version gradle-dependencies
@@ -164,8 +163,6 @@ release-apk-arm64-v8a-apksigner: keystore-env version gradle-dependencies
 	$(ANDROID_HOME)/build-tools/34.0.0/apksigner verify -v tailscale-release-arm64-v8a.apk
 	@echo "Successfully built and signed with apksigner: tailscale-release-arm64-v8a.apk"
 
-=======
->>>>>>> theirs
 # gradle-dependencies groups together the android sources and libtailscale needed to assemble tests/debug/release builds.
 .PHONY: gradle-dependencies
 gradle-dependencies: $(shell find android -type f -not -path "android/build/*" -not -path '*/.*') $(LIBTAILSCALE_AAR) tailscale.version
@@ -290,13 +287,6 @@ ifeq ($(wildcard $(JKS_PATH)),)
 endif
 	@echo "keystore path set to $(JKS_PATH)"
 
-<<<<<<< ours
-# Alias for jarsign-env (more generic name for both jarsigner and apksigner)
-.PHONY: keystore-env
-keystore-env: jarsign-env
-
-=======
->>>>>>> theirs
 .PHONY: androidpath
 androidpath:
 	@echo "export ANDROID_HOME=$(ANDROID_HOME)"
