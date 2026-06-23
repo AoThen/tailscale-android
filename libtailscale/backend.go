@@ -5,6 +5,7 @@ package libtailscale
 
 import (
 	"context"
+	"crypto/x509"
 	"errors"
 	"fmt"
 	"log"
@@ -33,7 +34,6 @@ import (
 	"tailscale.com/tsd"
 	"tailscale.com/types/logger"
 	"tailscale.com/types/logid"
-	"tailscale.com/types/netmap"
 	"tailscale.com/util/eventbus"
 	"tailscale.com/wgengine"
 	"tailscale.com/wgengine/netstack"
@@ -58,6 +58,11 @@ type App struct {
 	backend         *ipnlocal.LocalBackend
 	ready           sync.WaitGroup
 	backendMu       sync.Mutex
+
+	// logger is the logtail logger whose uploads follow the user's
+	// IsClientLoggingEnabled preference. Populated once runBackend wires
+	// up the backend; nil before then.
+	logger atomic.Pointer[logtail.Logger]
 }
 
 func start(dataDir, directFileRoot string, hwAttestationPref bool, appCtx AppContext) Application {
@@ -141,11 +146,15 @@ func (a *App) runBackend(ctx context.Context, hardwareAttestation bool) error {
 		return err
 	}
 	a.logIDPublicAtomic.Store(&b.logIDPublic)
+	a.logger.Store(b.logger)
 	a.backend = b.backend
 	if hardwareAttestation {
 		a.backend.SetHardwareAttested()
 	}
-	defer b.CloseTUNs()
+	defer func() {
+		b.devices.Down()
+		b.CloseTUNs()
+	}()
 
 	hc := localapi.HandlerConfig{
 		Actor:    ipnauth.Self,
@@ -167,19 +176,14 @@ func (a *App) runBackend(ctx context.Context, hardwareAttestation bool) error {
 	b.avoidEmptyDNS = a.isChromeOS()
 
 	var (
-		cfg        configPair
-		state      ipn.State
-		networkMap *netmap.NetworkMap
+		cfg   configPair
+		state ipn.State
 	)
 
 	stateCh := make(chan ipn.State)
-	netmapCh := make(chan *netmap.NetworkMap)
-	go b.backend.WatchNotifications(ctx, ipn.NotifyInitialNetMap|ipn.NotifyInitialPrefs|ipn.NotifyInitialState, func() {}, func(notify *ipn.Notify) bool {
+	go b.backend.WatchNotifications(ctx, ipn.NotifyInitialPrefs|ipn.NotifyInitialState|ipn.NotifyNoNetMap, func() {}, func(notify *ipn.Notify) bool {
 		if notify.State != nil {
 			stateCh <- *notify.State
-		}
-		if notify.NetMap != nil {
-			netmapCh <- notify.NetMap
 		}
 		return true
 	})
@@ -196,8 +200,6 @@ func (a *App) runBackend(ctx context.Context, hardwareAttestation bool) error {
 					a.closeVpnService(err, b)
 				}
 			}
-		case n := <-netmapCh:
-			networkMap = n
 		case c := <-configs:
 			cfg = c
 			if vpnService.service == nil || !b.isConfigNonNilAndDifferent(cfg.rcfg, cfg.dcfg) {
@@ -224,6 +226,12 @@ func (a *App) runBackend(ctx context.Context, hardwareAttestation bool) error {
 				}
 				return nil // even on error. see big TODO above.
 			})
+			netns.SetAndroidBindToNetworkFunc(func(fd int) error {
+				if ok := a.appCtx.BindSocketToNetwork(int32(fd)); !ok {
+					log.Printf("[unexpected] IPNService.bindSocketToNetwork(%d) returned false", fd)
+				}
+				return nil
+			})
 			log.Printf("onVPNRequested: rebind required")
 			// TODO(catzkorn): When we start the android application
 			// we bind sockets before we have access to the VpnService.protect()
@@ -237,9 +245,6 @@ func (a *App) runBackend(ctx context.Context, hardwareAttestation bool) error {
 
 			vpnService.service = s
 
-			if networkMap != nil {
-				// TODO
-			}
 			if state >= ipn.Starting && b.isConfigNonNilAndDifferent(cfg.rcfg, cfg.dcfg) {
 				if err := b.updateTUN(cfg.rcfg, cfg.dcfg); err != nil {
 					a.closeVpnService(err, b)
@@ -247,8 +252,12 @@ func (a *App) runBackend(ctx context.Context, hardwareAttestation bool) error {
 			}
 		case s := <-onDisconnect:
 			if vpnService.service != nil && vpnService.service.ID() == s.ID() {
+				if b.devices.Down() {
+					log.Printf("tunnel brought down on disconnect")
+				}
 				b.CloseTUNs()
 				netns.SetAndroidProtectFunc(nil)
+				netns.SetAndroidBindToNetworkFunc(nil)
 				vpnService.service = nil
 			}
 		case i := <-onDNSConfigChanged:
@@ -268,7 +277,23 @@ func (a *App) newBackend(dataDir string, appCtx AppContext, store *stateStore,
 	sys := tsd.NewSystem()
 	sys.Set(store)
 
-	logf := logger.RusagePrefixLog(log.Printf)
+	if pemData, err := appCtx.GetUserCACertsPEM(); err != nil {
+		log.Printf("GetUserCACertsPEM: %v", err)
+	} else if len(pemData) > 0 {
+		pool, err := x509.SystemCertPool()
+		if err != nil {
+			log.Printf("x509.SystemCertPool: %v; using empty pool", err)
+			pool = x509.NewCertPool()
+		}
+		if pool.AppendCertsFromPEM(pemData) {
+			sys.ExtraRootCAs = pool
+			log.Printf("loaded user CA certificates into ExtraRootCAs")
+		} else {
+			log.Printf("failed to parse any user CA certificates from PEM data")
+		}
+	}
+
+	logf := logger.Logf(log.Printf)
 	b := &backend{
 		devices:  newTUNDevices(),
 		settings: settings,
@@ -296,10 +321,10 @@ func (a *App) newBackend(dataDir string, appCtx AppContext, store *stateStore,
 
 	netMon, err := netmon.New(b.bus, logf)
 	if err != nil {
-		log.Printf("netmon.New: %w", err)
+		log.Printf("netmon.New: %v", err)
 	}
 	b.netMon = netMon
-	b.setupLogs(dataDir, logID, logf, sys.HealthTracker.Get())
+	b.setupLogs(dataDir, logID, logf, sys.HealthTracker.Get(), a.isClientLoggingEnabled())
 	dialer := new(tsdial.Dialer)
 	vf := &VPNFacade{
 		SetBoth:           b.setCfg,
@@ -392,7 +417,9 @@ func (a *App) closeVpnService(err error, b *backend) {
 		log.Printf("localapi edit prefs error %v", localApiErr)
 	}
 
-	b.lastCfg = nil
+	if b.devices.Down() {
+		log.Printf("tunnel brought down on VPN service error: %v", err)
+	}
 	b.CloseTUNs()
 
 	vpnService.service.DisconnectVPN()
